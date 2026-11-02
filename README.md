@@ -22,7 +22,7 @@ Or copy a skill folder into `~/.claude/skills/` (Claude Code) or your agent's sk
 /plugin install arcadium-data --marketplace arcadiumdata/skills
 ```
 
-On older Claude Code versions: `/plugin marketplace add arcadiumdata/skills`, then `/plugin install arcadium-data@arcadiumdata`. The plugin holds the same seven skills, named `arcadium-data:<skill>`.
+On older Claude Code versions: `/plugin marketplace add arcadiumdata/skills`, then `/plugin install arcadium-data@arcadiumdata`. The plugin holds the same ten skills, named `arcadium-data:<skill>`.
 
 ## Requirements
 
@@ -43,7 +43,22 @@ On older Claude Code versions: `/plugin marketplace add arcadiumdata/skills`, th
 | [youtube-transcript-research](skills/youtube-transcript-research/SKILL.md) | Find videos on a topic, pull their transcripts, and summarise claims with timestamps | `arcadium/youtube-videos`, `arcadium/youtube-transcripts` |
 | [hotel-reputation-audit](skills/hotel-reputation-audit/SKILL.md) | One hotel (or a hotel and its competitors) across Tripadvisor, Booking.com, Google Hotels, Agoda and Trip.com on one 1-5 scale, with complaint themes and reply rate | `arcadium/hotel-reputation`, `arcadium/tripadvisor-reviews`, `arcadium/booking-reviews`, `arcadium/google-hotel-reviews` |
 | [hiring-signals](skills/hiring-signals/SKILL.md) | Which ATS a company uses, how many jobs are open, which teams and countries are hiring, and the open jobs themselves | `arcadium/ats-lookup`, `arcadium/career-site-jobs` |
+| [youtube-transcript](skills/youtube-transcript/SKILL.md) | Transcripts of YouTube videos, Shorts, channels or playlists as text, timed segments, SRT or VTT; for when `youtube-transcript-api` raises `RequestBlocked` on a server | `arcadium/youtube-transcripts` |
+| [google-trends](skills/google-trends/SKILL.md) | Google Trends interest over time, by region, rising queries and Trending now as JSON, more than 5 keywords on one scale; for when `pytrends` gets HTTP 429 | `arcadium/google-trends` |
+| [trustpilot-reviews](skills/trustpilot-reviews/SKILL.md) | Trustpilot reviews (stars, text, date, company reply) and company rows (TrustScore, star split, reply rate), with star, language and date filters and only-new monitoring | `arcadium/trustpilot-reviews` |
 | [arcadium-web-data](skills/arcadium-web-data/SKILL.md) | A router: from a data request (Amazon, Etsy, 1688, hotel prices and reviews, Yelp, Capterra, TrustRadius, app reviews, Google Trends, Google News, YouTube, career-site jobs, Seek, ATS, AutoScout24) to the actor ID, a first input that works and the price | all 24 public `arcadium/*` actors |
+
+### youtube-transcript
+
+"Get the transcript of https://www.youtube.com/watch?v=dQw4w9WgXcQ with timestamps." Video links, bare IDs, channels or playlists in one run; segments keep the `text`, `start`, `duration` fields that `youtube-transcript-api` uses. About $0.026 for 10 transcripts.
+
+### google-trends
+
+"Compare US search interest in notion and obsidian over 12 months." Same parameters as `pytrends` `build_payload`, run in the Apify cloud with retries instead of from your IP. About $0.014 for 5 keywords on one scale.
+
+### trustpilot-reviews
+
+"List the top complaints in the last 200 one- and two-star Trustpilot reviews of bestbuy.com." One row per review plus a free company row; more than 200 reviews per company through filter combinations; `onlyNewReviews` for a weekly monitor. About $0.17 for 3 companies x 100 reviews.
 
 ### competitor-review-mining
 

@@ -9,7 +9,7 @@
     {
       "name": "arcadium-data",
       "source": "./",
-      "description": "Skills that run Arcadium Data's public web data actors on Apify with your own Apify account: review mining, Amazon product research, YouTube transcripts, hotel reputation, hiring signals and a router to all 24 public actors."
+      "description": "Skills that run Arcadium Data's public web data actors on Apify with your own Apify account: review mining, Amazon product research, YouTube transcripts, hotel reputation, hiring signals, Google Trends, Trustpilot reviews and a router to all 24 public actors."
     }
   ]
 }
