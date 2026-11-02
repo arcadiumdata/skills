@@ -8,10 +8,10 @@ Open-source [Agent Skills](https://docs.claude.com/en/docs/agents-and-tools/agen
 
 ```bash
 # all skills
-npx skills add arcadium-data/skills
+npx skills add arcadiumdata/skills
 
 # one skill
-npx skills add arcadium-data/skills --skill competitor-review-mining
+npx skills add arcadiumdata/skills --skill competitor-review-mining
 ```
 
 Or copy a skill folder into `~/.claude/skills/` (Claude Code) or your agent's skills directory.
