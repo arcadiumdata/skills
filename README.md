@@ -62,7 +62,7 @@ On older Claude Code versions: `/plugin marketplace add arcadiumdata/skills`, th
 
 ### competitor-review-mining
 
-"Mine 1 and 2 star reviews for Asana, Monday.com and ClickUp and rank the complaints." Capterra and TrustRadius filter by rating on the site; Google Play and App Store reviews are filtered by the helper script `scripts/split_reviews.py`, which writes `competitor-profiles/raw/<slug>/<YYYY-MM-DD>/reviews/<platform>.json` and `.md`. About $0.90 at most for one competitor at 100 reviews per site. Trustpilot is added once Arcadium's Trustpilot actor is public.
+"Mine 1 and 2 star reviews for Asana, Monday.com and ClickUp and rank the complaints." Capterra and TrustRadius filter by rating on the site; Google Play and App Store reviews are filtered by the helper script `scripts/split_reviews.py`, which writes `competitor-profiles/raw/<slug>/<YYYY-MM-DD>/reviews/<platform>.json` and `.md`. About $0.90 at most for one competitor at 100 reviews per site. For Trustpilot reviews, use the `trustpilot-reviews` skill.
 
 ### replica-reviews-csv
 
