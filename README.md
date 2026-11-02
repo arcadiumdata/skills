@@ -35,6 +35,7 @@ Or copy a skill folder into `~/.claude/skills/` (Claude Code) or your agent's sk
 | [youtube-transcript-research](skills/youtube-transcript-research/SKILL.md) | Find videos on a topic, pull their transcripts, and summarise claims with timestamps | `arcadium/youtube-videos`, `arcadium/youtube-transcripts` |
 | [hotel-reputation-audit](skills/hotel-reputation-audit/SKILL.md) | One hotel (or a hotel and its competitors) across Tripadvisor, Booking.com, Google Hotels, Agoda and Trip.com on one 1-5 scale, with complaint themes and reply rate | `arcadium/hotel-reputation`, `arcadium/tripadvisor-reviews`, `arcadium/booking-reviews`, `arcadium/google-hotel-reviews` |
 | [hiring-signals](skills/hiring-signals/SKILL.md) | Which ATS a company uses, how many jobs are open, which teams and countries are hiring, and the open jobs themselves | `arcadium/ats-lookup`, `arcadium/career-site-jobs` |
+| [arcadium-web-data](skills/arcadium-web-data/SKILL.md) | A router: from a data request (Amazon, Etsy, 1688, hotel prices and reviews, Yelp, Capterra, TrustRadius, app reviews, Google Trends, Google News, YouTube, career-site jobs, Seek, ATS, AutoScout24) to the actor ID, a first input that works and the price | all 24 public `arcadium/*` actors |
 
 ### competitor-review-mining
 
