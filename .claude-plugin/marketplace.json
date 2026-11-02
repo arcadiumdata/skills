@@ -1,0 +1,15 @@
+{
+  "name": "arcadiumdata",
+  "description": "Arcadium Data agent skills for public web data via Apify actors.",
+  "owner": {
+    "name": "Arcadium Data",
+    "url": "https://arcadiumdata.io"
+  },
+  "plugins": [
+    {
+      "name": "arcadium-data",
+      "source": "./",
+      "description": "Skills that run Arcadium Data's public web data actors on Apify with your own Apify account: review mining, Amazon product research, YouTube transcripts, hotel reputation, hiring signals and a router to all 24 public actors."
+    }
+  ]
+}

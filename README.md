@@ -16,6 +16,14 @@ npx skills add arcadiumdata/skills --skill competitor-review-mining
 
 Or copy a skill folder into `~/.claude/skills/` (Claude Code) or your agent's skills directory.
 
+### As a Claude Code plugin
+
+```text
+/plugin install arcadium-data --marketplace arcadiumdata/skills
+```
+
+On older Claude Code versions: `/plugin marketplace add arcadiumdata/skills`, then `/plugin install arcadium-data@arcadiumdata`. The plugin holds the same seven skills, named `arcadium-data:<skill>`.
+
 ## Requirements
 
 - An Apify account and an API token (`APIFY_TOKEN`), from [Apify Console > Settings > Integrations](https://console.apify.com/settings/integrations).
@@ -60,6 +68,14 @@ Or copy a skill folder into `~/.claude/skills/` (Claude Code) or your agent's sk
 ### hiring-signals
 
 "Which of these 40 SaaS companies are hiring sales people in Germany?" ATS detection with open jobs, 30-day velocity, department and country mix for a company list (charged only when a board is found), then the matching jobs and an optional weekly new-jobs watch. About $0.88 at most for 40 companies scanned and 400 jobs.
+
+## What the skills run, send and fetch
+
+- The skills are Markdown instructions. They run no code on install, start no server, and use no hooks.
+- When a skill is used, it tells the agent to run the user's own Apify CLI (`apify actors call`, `apify actors info`, `apify datasets get-items`) or the user's own Apify MCP connection. The request goes to the Apify API (`api.apify.com`) under the user's Apify account and token. It carries the user's inputs: search terms, product or company names, hotel names, and public URLs such as YouTube or Booking.com links. The Apify actors then fetch the public pages and return the rows.
+- No other destination. The skills send nothing to Arcadium Data or to any third party, use no analytics, and read no credentials other than the user's own Apify login. The `--user-agent arcadium-skills/<skill>` flag only labels the CLI call for Apify's usage statistics.
+- Two skills include a small Python script (standard library only, no network access) that turns the downloaded JSON into files: `competitor-review-mining/scripts/split_reviews.py` and `replica-reviews-csv/scripts/to_reviews_csv.py`.
+- Cost: the user pays Apify per result, at the prices listed in each skill, each with a worked cost example.
 
 ## Data rules
 

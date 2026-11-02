@@ -1,0 +1,11 @@
+{
+  "name": "arcadium-data",
+  "displayName": "Arcadium Data",
+  "version": "1.0.0",
+  "description": "Skills that run Arcadium Data's public web data actors on Apify with your own Apify account: competitor review mining (Capterra, TrustRadius, Google Play, App Store), Amazon product research with Google Trends and 1688 prices, YouTube transcript research with timestamped citations, hotel reputation audits across Tripadvisor, Booking.com and Google, hiring signals from company career sites, and a router to all 24 public actors.",
+  "author": { "name": "Arcadium Data", "url": "https://arcadiumdata.io" },
+  "homepage": "https://github.com/arcadiumdata/skills",
+  "repository": "https://github.com/arcadiumdata/skills",
+  "license": "MIT",
+  "keywords": ["web scraping", "apify", "reviews", "youtube transcripts", "amazon product research", "hotel reviews", "job postings", "google trends"]
+}
