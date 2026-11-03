@@ -1,0 +1,187 @@
+{
+  "name": "Amazon and AliExpress product search to Google Sheets (Apify)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "7e3f9c42-9c33-0000-4000-8000-000000000001",
+      "name": "Run now",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorId": "arcadium~amazon-products",
+        "actorInputMode": "json",
+        "customBody": "{\n  \"searches\": [\n    \"standing desk\",\n    \"desk lamp\"\n  ],\n  \"marketplace\": \"US\",\n  \"maxResultsPerSearch\": 20\n}",
+        "timeout": 3600,
+        "memory": 256,
+        "maxTotalChargeUsd": 0.5,
+        "build": "",
+        "authentication": "apifyApi"
+      },
+      "id": "7e3f9c42-9c33-0000-4000-8000-000000000002",
+      "name": "Run Amazon search",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [240, -100],
+      "credentials": {
+        "apifyApi": {
+          "id": "REPLACE_WITH_YOUR_APIFY_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Amazon search result cards to the shared sheet columns.\nconst out = [];\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (r.rowType !== 'searchResult') continue;\n  out.push({\n    json: {\n      source: r.domain ?? 'amazon',\n      searchTerm: r.searchTerm,\n      position: r.position,\n      productId: r.asin,\n      title: r.title,\n      price: r.price ?? '',\n      currency: r.currency ?? '',\n      rating: r.rating ?? '',\n      ratingCount: r.ratingCount ?? '',\n      sold: r.boughtPastMonthText ?? '',\n      sponsored: r.sponsored === true,\n      url: r.url,\n      scrapedAt: r.scrapedAt,\n    },\n  });\n}\nreturn out;"
+      },
+      "id": "7e3f9c42-9c33-0000-4000-8000-000000000003",
+      "name": "Amazon to rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, -100]
+    },
+    {
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorId": "arcadium~aliexpress-search",
+        "actorInputMode": "json",
+        "customBody": "{\n  \"searchTerms\": [\n    \"standing desk\",\n    \"desk lamp\"\n  ],\n  \"maxResultsPerTerm\": 20,\n  \"sort\": \"relevance\"\n}",
+        "timeout": 3600,
+        "memory": 1024,
+        "maxTotalChargeUsd": 0.5,
+        "build": "",
+        "authentication": "apifyApi"
+      },
+      "id": "7e3f9c42-9c33-0000-4000-8000-000000000004",
+      "name": "Run AliExpress search",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [240, 100],
+      "credentials": {
+        "apifyApi": {
+          "id": "REPLACE_WITH_YOUR_APIFY_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// AliExpress search results to the shared sheet columns (error and market-report rows are skipped).\nconst out = [];\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (!r.productId || r.rowType === 'error' || r.rowType === 'validation_report') continue;\n  out.push({\n    json: {\n      source: 'aliexpress',\n      searchTerm: r.searchTerm,\n      position: r.searchRank,\n      productId: r.productId,\n      title: r.title,\n      price: r.price ?? '',\n      currency: r.currency ?? '',\n      rating: r.rating ?? '',\n      ratingCount: '',\n      sold: r.soldText ?? '',\n      sponsored: r.isAd === true,\n      url: r.url,\n      scrapedAt: r.scrapedAt,\n    },\n  });\n}\nreturn out;"
+      },
+      "id": "7e3f9c42-9c33-0000-4000-8000-000000000005",
+      "name": "AliExpress to rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 100]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SPREADSHEET_ID/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Products",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "7e3f9c42-9c33-0000-4000-8000-000000000006",
+      "name": "Append to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Run now": {
+      "main": [
+        [
+          {
+            "node": "Run Amazon search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Run AliExpress search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Amazon search": {
+      "main": [
+        [
+          {
+            "node": "Amazon to rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run AliExpress search": {
+      "main": [
+        [
+          {
+            "node": "AliExpress to rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Amazon to rows": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AliExpress to rows": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

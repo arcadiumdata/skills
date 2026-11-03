@@ -1,0 +1,257 @@
+{
+  "name": "Weekly Trustpilot reviews of competitors to Google Sheets (Apify Trustpilot Reviews)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [1],
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "3b1f6a20-7a11-0000-4000-8000-000000000001",
+      "name": "Every Monday",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorId": "arcadium~trustpilot-reviews",
+        "actorInputMode": "json",
+        "customBody": "{\n  \"companies\": [\n    \"www.bestbuy.com\",\n    \"www.newegg.com\",\n    \"www.bhphotovideo.com\"\n  ],\n  \"maxReviewsPerCompany\": 100,\n  \"sort\": \"recency\",\n  \"includeCompanyInfo\": true,\n  \"watch\": true,\n  \"watchKey\": \"n8n-sheets-competitors\",\n  \"digest\": true,\n  \"digestDays\": 7,\n  \"includeCoverageRows\": false,\n  \"includeErrorRows\": true\n}",
+        "timeout": 3600,
+        "memory": 2048,
+        "maxTotalChargeUsd": 1,
+        "build": "",
+        "authentication": "apifyApi"
+      },
+      "id": "3b1f6a20-7a11-0000-4000-8000-000000000002",
+      "name": "Run Trustpilot Reviews",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [240, 0],
+      "credentials": {
+        "apifyApi": {
+          "id": "REPLACE_WITH_YOUR_APIFY_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Keep review rows only (company, coverage, error, watch-summary and watch-digest rows have their own rowType).\nconst out = [];\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (!r.reviewId || ['company', 'coverage', 'error', 'watch-summary', 'watch-digest'].includes(r.rowType)) continue;\n  out.push({\n    json: {\n      reviewId: r.reviewId,\n      date: r.date,\n      company: r.productName,\n      rating: r.ratingOverall,\n      title: r.title ?? '',\n      text: r.text ?? '',\n      companyReply: r.vendorResponse ?? '',\n      verified: r.reviewerVerified === true,\n      language: r.language ?? '',\n      country: r.country ?? '',\n      edited: r.change?.type === 'changed',\n      url: r.reviewUrl ?? r.productUrl ?? '',\n      scrapedAt: r.scrapedAt,\n    },\n  });\n}\nreturn out;"
+      },
+      "id": "3b1f6a20-7a11-0000-4000-8000-000000000003",
+      "name": "Reviews to rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, -100]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SPREADSHEET_ID/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Reviews",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "3b1f6a20-7a11-0000-4000-8000-000000000004",
+      "name": "Append reviews",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, -100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// One free company row per competitor and run: a weekly TrustScore snapshot.\nconst out = [];\nfor (const item of $input.all()) {\n  const c = item.json;\n  if (c.rowType !== 'company') continue;\n  out.push({\n    json: {\n      week: new Date().toISOString().slice(0, 10),\n      company: c.name,\n      trustScore: c.trustScore,\n      stars: c.stars,\n      reviewCount: c.reviewCount,\n      replyPercentage: c.replyPercentage ?? '',\n      primaryCategory: c.primaryCategory ?? '',\n      url: c.url ?? '',\n    },\n  });\n}\nreturn out;"
+      },
+      "id": "3b1f6a20-7a11-0000-4000-8000-000000000005",
+      "name": "Companies to rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 100]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SPREADSHEET_ID/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "TrustScores",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "3b1f6a20-7a11-0000-4000-8000-000000000006",
+      "name": "Append TrustScores",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// One free watch-digest row per run: the changes of the last 7 days and a one-line summary.\nconst out = [];\nfor (const item of $input.all()) {\n  const d = item.json;\n  if (d.rowType !== 'watch-digest') continue;\n  out.push({\n    json: {\n      digestAt: d.digestAt,\n      windowStart: d.windowStart,\n      windowEnd: d.windowEnd,\n      runs: d.runs,\n      newReviews: d.new,\n      changedReviews: d.changed,\n      goneReviews: d.gone,\n      newOneStar: d.tags?.newOneStar ?? 0,\n      summary: d.summary,\n    },\n  });\n}\nreturn out;"
+      },
+      "id": "3b1f6a20-7a11-0000-4000-8000-000000000007",
+      "name": "Digest to row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SPREADSHEET_ID/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Digest",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "3b1f6a20-7a11-0000-4000-8000-000000000008",
+      "name": "Append digest",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Monday": {
+      "main": [
+        [
+          {
+            "node": "Run Trustpilot Reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Trustpilot Reviews": {
+      "main": [
+        [
+          {
+            "node": "Reviews to rows",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Companies to rows",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Digest to row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reviews to rows": {
+      "main": [
+        [
+          {
+            "node": "Append reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Companies to rows": {
+      "main": [
+        [
+          {
+            "node": "Append TrustScores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Digest to row": {
+      "main": [
+        [
+          {
+            "node": "Append digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "name": "Weekly Google Trends keyword comparison to Google Sheets (Apify Google Trends)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [1],
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "5c2d8b31-8b22-0000-4000-8000-000000000001",
+      "name": "Every Monday",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorId": "arcadium~google-trends",
+        "actorInputMode": "json",
+        "customBody": "{\n  \"searchTerms\": [\n    \"notion\",\n    \"obsidian\",\n    \"evernote\",\n    \"onenote\"\n  ],\n  \"compareKeywords\": true,\n  \"geo\": \"US\",\n  \"timeRange\": \"\",\n  \"includeRelatedQueries\": false,\n  \"includeRelatedTopics\": false,\n  \"includeGeo\": false\n}",
+        "timeout": 3600,
+        "memory": 512,
+        "maxTotalChargeUsd": 0.5,
+        "build": "",
+        "authentication": "apifyApi"
+      },
+      "id": "5c2d8b31-8b22-0000-4000-8000-000000000002",
+      "name": "Run Google Trends",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [240, 0],
+      "credentials": {
+        "apifyApi": {
+          "id": "REPLACE_WITH_YOUR_APIFY_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// One sheet row per keyword and run. All keywords share one 0-100 scale (compareKeywords), so rows of the\n// same run compare directly. lastWeek is the last complete point of the timeline (the partial one is skipped).\nconst out = [];\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (r.rowType === 'error' || !r.searchTerm) continue;\n  const points = (r.interestOverTime_timelineData ?? []).filter((p) => !(p.isPartial === true));\n  const last = points[points.length - 1];\n  out.push({\n    json: {\n      runDate: new Date().toISOString().slice(0, 10),\n      keyword: r.searchTerm,\n      geo: r.geo || 'worldwide',\n      timeRange: r.timeRange,\n      averageInterest: r.averageInterest,\n      lastWeek: last?.formattedTime ?? '',\n      lastWeekInterest: last?.value?.[0] ?? '',\n      scale: r.scale?.method ?? '',\n      scrapedAt: r.scrapedAt,\n    },\n  });\n}\nreturn out;"
+      },
+      "id": "5c2d8b31-8b22-0000-4000-8000-000000000003",
+      "name": "Keywords to rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SPREADSHEET_ID/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Trends",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "5c2d8b31-8b22-0000-4000-8000-000000000004",
+      "name": "Append to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Monday": {
+      "main": [
+        [
+          {
+            "node": "Run Google Trends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Google Trends": {
+      "main": [
+        [
+          {
+            "node": "Keywords to rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keywords to rows": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

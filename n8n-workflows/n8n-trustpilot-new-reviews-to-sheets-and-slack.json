@@ -1,0 +1,199 @@
+{
+  "name": "New Trustpilot reviews to Google Sheets and Slack (Apify Trustpilot Reviews)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## New Trustpilot reviews to Google Sheets and Slack\n\nEvery morning this workflow collects the reviews posted since the last run for a list of companies on Trustpilot, appends them to a Google Sheet and posts one summary message to Slack.\n\n### How it works\n1. **Get new reviews** runs the Apify actor `arcadium/trustpilot-reviews` (Trustpilot Reviews Scraper by Arcadium Data) in only-new mode: it remembers delivered reviews under `stateKey`, so each run returns only reviews of the last 7 days (`dateFrom`) that it has not delivered before. Repeats are free.\n2. **Reviews to rows** keeps review rows and picks the columns.\n3. **Append to Google Sheets** writes one row per review.\n4. **Slack summary** builds one message (counts per company, newest 1-2 star reviews) and **Post to Slack** sends it. No new reviews, no message.\n\n### Set up\n1. Install or enable the Apify node (`@apify/n8n-nodes-apify`) and add an **Apify API** credential.\n2. Edit `companies` in **Get new reviews** (domains or Trustpilot review page URLs). Keep `stateKey` stable.\n3. Create a sheet tab **Reviews** with this header row: `reviewId | date | company | rating | title | text | companyReply | verified | language | edited | url | scrapedAt`. Then add Google Sheets and Slack credentials; set the channel.\n4. Execute once (the first run writes the last 7 days of reviews), then activate.\n\n### Cost\n$0.00052 per review on the Free Apify plan at the time of writing; repeats are not charged. The node caps a run at $0.50.",
+        "height": 860,
+        "width": 480
+      },
+      "id": "7a1e3c40-1b02-0000-4000-8000-000000000010",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-520, -340]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "7a1e3c40-1b02-0000-4000-8000-000000000001",
+      "name": "Every morning",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 160]
+    },
+    {
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorId": "arcadium~trustpilot-reviews",
+        "actorInputMode": "json",
+        "customBody": "{\n  \"companies\": [\n    \"www.bestbuy.com\",\n    \"www.newegg.com\"\n  ],\n  \"maxReviewsPerCompany\": 100,\n  \"sort\": \"recency\",\n  \"dateFrom\": \"7 days\",\n  \"onlyNewReviews\": true,\n  \"stateKey\": \"n8n-new-reviews\",\n  \"markEdited\": true,\n  \"includeCompanyInfo\": false,\n  \"includeCoverageRows\": false,\n  \"includeErrorRows\": true\n}",
+        "timeout": 3600,
+        "memory": 1024,
+        "maxTotalChargeUsd": 0.5,
+        "build": "",
+        "authentication": "apifyApi"
+      },
+      "id": "7a1e3c40-1b02-0000-4000-8000-000000000002",
+      "name": "Get new reviews",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [240, 160],
+      "credentials": {
+        "apifyApi": {
+          "id": "REPLACE_WITH_YOUR_APIFY_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Keep review rows only. Company, coverage and error rows have their own rowType.\n// In only-new mode every review arrives once; a review edited in the last 7 days comes back with changeType 'edited'.\nconst out = [];\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (r.rowType !== 'review' || !r.reviewId) continue;\n  out.push({\n    json: {\n      reviewId: r.reviewId,\n      date: r.date,\n      company: r.productName,\n      rating: r.ratingOverall,\n      title: r.title ?? '',\n      text: r.text ?? '',\n      companyReply: r.vendorResponse ?? '',\n      verified: r.reviewerVerified === true,\n      language: r.language ?? '',\n      edited: r.extras?.changeType === 'edited',\n      url: r.reviewUrl ?? r.productUrl ?? '',\n      scrapedAt: r.scrapedAt,\n    },\n  });\n}\nreturn out;"
+      },
+      "id": "7a1e3c40-1b02-0000-4000-8000-000000000003",
+      "name": "Reviews to rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 160]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SPREADSHEET_ID/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Reviews",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "7a1e3c40-1b02-0000-4000-8000-000000000004",
+      "name": "Append to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 60],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// One Slack message per run: counts per company and star, then the newest low-star reviews.\n// Nothing is posted when the run found no new reviews (this node then gets no items).\nconst rows = $input.all().map((i) => i.json);\nif (rows.length === 0) return [];\nconst MAX_LISTED = 10;\nconst byCompany = {};\nfor (const r of rows) {\n  const c = (byCompany[r.company] ??= { total: 0, low: 0 });\n  c.total++;\n  if (Number(r.rating) <= 2) c.low++;\n}\nconst lines = Object.entries(byCompany).map(\n  ([name, c]) => `*${name}*: ${c.total} new review${c.total === 1 ? '' : 's'}, ${c.low} with 1-2 stars`,\n);\nconst low = rows.filter((r) => Number(r.rating) <= 2).slice(0, MAX_LISTED);\nfor (const r of low) {\n  const snippet = `${r.title ? `${r.title} - ` : ''}${r.text}`.slice(0, 300);\n  lines.push(`${'★'.repeat(Number(r.rating))} ${r.company} (${r.date})${r.edited ? ' [edited]' : ''}\\n>${snippet}\\n${r.url}`);\n}\nreturn [{ json: { text: `New Trustpilot reviews\\n${lines.join('\\n')}` } }];"
+      },
+      "id": "7a1e3c40-1b02-0000-4000-8000-000000000005",
+      "name": "Slack summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 260]
+    },
+    {
+      "parameters": {
+        "authentication": "accessToken",
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#reviews",
+          "mode": "name"
+        },
+        "messageType": "text",
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "7a1e3c40-1b02-0000-4000-8000-000000000006",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [960, 260],
+      "credentials": {
+        "slackApi": {
+          "id": "REPLACE_WITH_YOUR_SLACK_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every morning": {
+      "main": [
+        [
+          {
+            "node": "Get new reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get new reviews": {
+      "main": [
+        [
+          {
+            "node": "Reviews to rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reviews to rows": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack summary": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

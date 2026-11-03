@@ -1,0 +1,147 @@
+{
+  "name": "Weekly Google Trends interest over time to Google Sheets (Apify Google Trends)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Weekly Google Trends interest over time to Google Sheets\n\nEvery Monday this workflow fetches the weekly Google Trends interest (0-100) of up to five keywords over the past 12 months and keeps a sheet with one row per keyword and week, ready for a line chart or a pivot table.\n\n### How it works\n1. **Get Google Trends** runs the Apify actor `arcadium/google-trends` (Google Trends Scraper by Arcadium Data). `compareKeywords: true` puts all keywords on one shared scale.\n2. **Timeline to rows** turns each keyword's timeline into rows keyed by week, keyword and country.\n3. **Update Google Sheets** appends new weeks and updates existing ones (matched on `key`), so the sheet always holds the latest scale.\n\n### Set up\n1. Install or enable the Apify node (`@apify/n8n-nodes-apify`) and add an **Apify API** credential.\n2. Edit `searchTerms`, `geo` (country code or empty for worldwide) in **Get Google Trends**.\n3. Create a sheet tab **Interest** with this header row: `key | week | keyword | geo | interest | partial | scale | updatedAt`. Then add a Google Sheets credential and paste your sheet URL.\n4. Execute once, check the sheet, then activate.\n\n### Cost\n$0.0027 per keyword on the Free Apify plan at the time of writing: about $0.008 per run for 3 keywords. The node caps a run at $0.20.",
+        "height": 820,
+        "width": 480
+      },
+      "id": "7a1e3c40-1b03-0000-4000-8000-000000000010",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-520, -340]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [1],
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "7a1e3c40-1b03-0000-4000-8000-000000000001",
+      "name": "Every Monday",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 160]
+    },
+    {
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorId": "arcadium~google-trends",
+        "actorInputMode": "json",
+        "customBody": "{\n  \"searchTerms\": [\n    \"notion\",\n    \"obsidian\",\n    \"evernote\"\n  ],\n  \"compareKeywords\": true,\n  \"geo\": \"US\",\n  \"timeRange\": \"\",\n  \"includeRelatedQueries\": false,\n  \"includeRelatedTopics\": false,\n  \"includeGeo\": false,\n  \"includeErrorRows\": true\n}",
+        "timeout": 3600,
+        "memory": 512,
+        "maxTotalChargeUsd": 0.2,
+        "build": "",
+        "authentication": "apifyApi"
+      },
+      "id": "7a1e3c40-1b03-0000-4000-8000-000000000002",
+      "name": "Get Google Trends",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [240, 160],
+      "credentials": {
+        "apifyApi": {
+          "id": "REPLACE_WITH_YOUR_APIFY_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// One row per keyword and week. The whole timeline is written every run (update by key), because Google\n// rescales each request: rewriting the series keeps every value of a keyword on the scale of the latest run.\nconst out = [];\nconst updatedAt = new Date().toISOString();\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (r.rowType !== 'trend' || !r.searchTerm) continue;\n  const geo = r.geo || 'worldwide';\n  for (const p of r.interestOverTime_timelineData ?? []) {\n    const week = new Date(Number(p.time) * 1000).toISOString().slice(0, 10);\n    out.push({\n      json: {\n        key: `${week}|${r.searchTerm}|${geo}`,\n        week,\n        keyword: r.searchTerm,\n        geo,\n        interest: p.value?.[0] ?? '',\n        partial: p.isPartial === true,\n        scale: r.scale?.method ?? '',\n        updatedAt,\n      },\n    });\n  }\n}\nreturn out;"
+      },
+      "id": "7a1e3c40-1b03-0000-4000-8000-000000000003",
+      "name": "Timeline to rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 160]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SPREADSHEET_ID/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Interest",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["key"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "7a1e3c40-1b03-0000-4000-8000-000000000004",
+      "name": "Update Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 160],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Monday": {
+      "main": [
+        [
+          {
+            "node": "Get Google Trends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Google Trends": {
+      "main": [
+        [
+          {
+            "node": "Timeline to rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timeline to rows": {
+      "main": [
+        [
+          {
+            "node": "Update Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
